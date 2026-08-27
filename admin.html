@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="description" content="HarvestLink operations dashboard"><title>Admin dashboard | HarvestLink</title><link rel="stylesheet" href="admin.css"></head>
+<body>
+  <div class="admin-shell">
+    <aside class="sidebar"><a class="brand" href="index.html"><span class="brand-mark">↗</span> harvestlink</a><p class="side-label">Operations</p><nav class="side-nav"><a href="#overview" class="active">Overview</a><a href="#produce">Produce listings</a><a href="#orders">Orders</a><a href="farmer-dashboard.html">Farmer dashboard</a><a href="transport-dashboard.html">Transport dashboard</a><a href="order-tracking.html">Client tracking</a><a href="index.html">Back to marketplace</a></nav><div class="sidebar-footer">Admin workspace<br><strong>Connected · Live data</strong></div></aside>
+    <div class="content">
+      <header class="top"><div><h1>Good morning, Maya.</h1><p>Here’s what’s moving across the network today.</p></div><div class="top-actions"><button class="btn btn-outline" id="refreshBtn">↻ Refresh</button><div class="avatar">MC</div></div></header>
+      <main class="dashboard" id="overview">
+        <section class="stats"><div class="stat-card"><p>Verified farmers</p><strong id="farmerCount">—</strong><span>+8.2%</span></div><div class="stat-card"><p>Active buyers</p><strong id="buyerCount">—</strong><span>+4.6%</span></div><div class="stat-card"><p>Active listings</p><strong id="produceCount">—</strong><span>Live</span></div><div class="stat-card"><p>Open routes</p><strong id="routeCount">—</strong><span>Today</span></div></section>
+        <section class="panel" id="produce"><div class="panel-head"><div><h2>Produce listings</h2><p>Review and manage what is available in the marketplace.</p></div><button class="btn btn-green" id="newProduceBtn">+ New listing</button></div><div class="table-wrap"><table><thead><tr><th>Produce</th><th>Farmer</th><th>Region</th><th>Quantity</th><th>Price/kg</th><th>Status</th><th>Actions</th></tr></thead><tbody id="produceRows"></tbody></table></div></section>
+        <section class="panel" id="routes"><div class="panel-head"><div><h2>Transport routes</h2><p>Match available capacity with the next load.</p></div></div><div class="table-wrap"><table><thead><tr><th>Driver</th><th>Route</th><th>Capacity</th><th>Status</th><th>Actions</th></tr></thead><tbody id="routeRows"></tbody></table></div></section>
+        <section class="panel" id="orders"><div class="panel-head"><div><h2>Recent orders</h2><p>Confirm receipt first, then release the farmer’s payment.</p></div></div><div class="table-wrap"><table><thead><tr><th>Buyer</th><th>Item</th><th>Status</th><th>Order value</th><th>Payment action</th></tr></thead><tbody id="orderRows"></tbody></table></div></section>
+        <p id="lastUpdated" style="color:var(--muted);font-size:11px"></p>
+      </main>
+    </div>
+  </div>
+  <dialog id="produceDialog"><div class="dialog-content"><div class="dialog-head"><h2>Add produce listing</h2><button class="close" id="closeDialog" aria-label="Close">×</button></div><form id="produceForm"><div class="field"><label for="name">Produce name</label><input id="name" name="name" required placeholder="e.g. Heirloom tomatoes"></div><div class="field"><label for="farmer">Farmer or co-op</label><input id="farmer" name="farmer" required placeholder="e.g. Green Valley Co-op"></div><div class="field"><label for="region">Region</label><select id="region" name="region"><option>Central</option><option>Northern</option><option>Coastal</option></select></div><div class="field"><label for="quantity">Quantity in kg</label><input id="quantity" name="quantity" type="number" min="1" required placeholder="850"></div><div class="field"><label for="price">Price per kg</label><input id="price" name="price" type="number" step="0.01" min="0.01" required placeholder="2.40"></div><button class="btn btn-green" type="submit">Add listing</button></form></div></dialog><div class="toast" id="toast" role="status"></div><script src="admin.js"></script>
+</body>
+</html>
+
