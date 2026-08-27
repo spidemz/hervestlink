@@ -1,6 +1,7 @@
 const state = { data: null };
 const toast = document.getElementById('toast');
 let toastTimer;
+const authScript = document.createElement('script'); authScript.src = 'dashboard-auth.js'; document.head.appendChild(authScript);
 const apiBase = location.port === '3000' ? '' : 'http://localhost:3000';
 
 function showToast(message) {
