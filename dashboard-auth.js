@@ -1,14 +1,14 @@
 (() => {
   const password = 'HarvestLinkStaff2026!';
   const sessionKey = 'harvestlink-staff-access';
-  const page = document.title.startsWith('Admin') ? 'Admin' : 'Transport';
+  const page = document.title.startsWith('Admin') ? 'Admin' : document.title.startsWith('Farmer') ? 'Farmer' : 'Transport';
 
   document.documentElement.classList.add('auth-locked');
   const initialize = () => {
     let gate = document.getElementById('staffGate');
     const form = document.getElementById('staffLoginForm');
     const error = document.getElementById('staffLoginError');
-    const shell = document.querySelector('.admin-shell, .transport-shell');
+    const shell = document.querySelector('.admin-shell, .transport-shell, .farmer-shell');
     if (!gate && shell) {
       gate = document.createElement('section');
       gate.className = 'staff-gate';

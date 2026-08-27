@@ -1,3 +1,4 @@
+const authScript = document.createElement('script'); authScript.src = 'dashboard-auth.js'; document.head.appendChild(authScript);
 const apiBase = location.port === '3000' ? '' : 'http://localhost:3000';
 const toast = document.getElementById('toast');
 let farmerName = '';
