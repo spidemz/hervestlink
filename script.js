@@ -2,6 +2,24 @@ const toast = document.getElementById('toast');
 let toastTimer;
 const apiBase = location.port === '3000' ? '' : 'http://localhost:3000';
 
+const siteNav = document.querySelector('.nav');
+const siteNavLinks = document.querySelector('.nav-links');
+if (siteNav && siteNavLinks && !document.getElementById('menuToggle')) {
+  const menuToggle = document.createElement('button');
+  menuToggle.id = 'menuToggle';
+  menuToggle.className = 'menu-toggle';
+  menuToggle.type = 'button';
+  menuToggle.setAttribute('aria-label', 'Open navigation menu');
+  menuToggle.setAttribute('aria-expanded', 'false');
+  menuToggle.innerHTML = '<span></span><span></span><span></span>';
+  siteNav.insertBefore(menuToggle, siteNavLinks);
+  menuToggle.addEventListener('click', () => {
+    const isOpen = siteNav.classList.toggle('menu-open');
+    menuToggle.setAttribute('aria-expanded', String(isOpen));
+    menuToggle.setAttribute('aria-label', isOpen ? 'Close navigation menu' : 'Open navigation menu');
+  });
+}
+
 document.querySelectorAll('.nav-links').forEach(nav => {
   if (!nav.querySelector('a[href="order-tracking.html"]')) {
     const trackingLink = document.createElement('a');
