@@ -133,6 +133,22 @@ async function submitOrder(event) {
   await loadMarketplaceListings();
 }
 
+document.querySelectorAll('.listing').forEach(card => {
+  if (card.querySelector('.order-btn')) return;
+  const name = card.querySelector('h3')?.textContent.trim();
+  const details = { 'Heirloom tomatoes': ['p-1001', 2.4, 850], 'Organic avocados': ['p-1002', 3.1, 420], 'Golden sweet corn': ['p-1003', 1.85, 1200], 'Red quinoa': ['p-1004', 4.6, 650] }[name];
+  if (!details) return;
+  const button = document.createElement('button');
+  button.className = 'btn btn-green order-btn';
+  button.textContent = 'Order now';
+  button.dataset.produce = details[0];
+  button.dataset.name = name;
+  button.dataset.price = details[1];
+  button.dataset.quantity = details[2];
+  card.querySelector('.listing-body').append(button);
+  button.addEventListener('click', () => openOrderDialog(button).catch(error => showToast(error.message)));
+});
+
 async function loadMarketplaceListings() {
   const grids = document.querySelectorAll('.listing-grid');
   if (!grids.length) return;

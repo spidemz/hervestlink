@@ -63,6 +63,7 @@ h2 { font: 600 34px/1.05 'Fraunces', serif; letter-spacing: -.035em; margin-bott
 .listing-body h3 { font-size: 16px; margin-bottom: 5px; }
 .origin { color: var(--muted); font-size: 12px; margin-bottom: 16px; }
 .listing-meta { border-top: 1px solid var(--line); padding-top: 13px; display: flex; justify-content: space-between; align-items: end; }
+.order-btn { width: 100%; margin-top: 14px; }
 .price { font-size: 16px; font-weight: 700; }
 .price small { color: var(--muted); font-size: 10px; font-weight: 400; }
 .qty { color: var(--muted); font-size: 11px; }
