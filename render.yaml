@@ -1,7 +1,0 @@
-services:
-  - type: web
-    name: harvestlink
-    runtime: node
-    buildCommand: ""
-    startCommand: node server.js
-    plan: free
