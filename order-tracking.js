@@ -3,15 +3,6 @@ const orderList = document.getElementById('orderList');
 const toast = document.getElementById('toast');
 let toastTimer;
 let trackingEmail = '';
-const paymentSession = new URLSearchParams(location.search).get('session_id');
-
-async function verifyPayment() {
-  if (!paymentSession) return;
-  const response = await fetch(`${apiBase}/api/payments/verify?session_id=${encodeURIComponent(paymentSession)}`);
-  const result = await response.json();
-  if (!response.ok) throw new Error(result.error || 'Could not verify payment');
-  showToast(result.paid ? 'Payment received and held in escrow.' : 'Payment is still pending.');
-}
 
 document.querySelectorAll('.nav-links').forEach(nav => {
   if (!nav.querySelector('a[href="order-tracking.html"]')) {
@@ -64,14 +55,3 @@ document.getElementById('changeEmail').addEventListener('click', () => {
   document.getElementById('trackingGate').hidden = false;
   document.getElementById('trackingEmail').focus();
 });
-
-const returnedEmail = new URLSearchParams(location.search).get('email');
-if (returnedEmail) {
-  trackingEmail = returnedEmail.trim().toLowerCase();
-  document.getElementById('trackingEmail').value = trackingEmail;
-  verifyPayment().then(async () => {
-    await loadOrders();
-    document.getElementById('trackingGate').hidden = true;
-    document.getElementById('ordersSection').hidden = false;
-  }).catch(error => showToast(error.message));
-}

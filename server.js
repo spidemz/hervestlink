@@ -3,14 +3,12 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { URL } = require('node:url');
 const { Pool } = require('pg');
-const Stripe = require('stripe');
 
 const root = __dirname;
 const dataPath = path.join(root, 'data.json');
 const port = process.env.PORT || 3000;
 const mimeTypes = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.json': 'application/json' };
 const pool = process.env.DATABASE_URL ? new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } }) : null;
-const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY) : null;
 let databaseReady;
 
 function readData() {
@@ -81,65 +79,6 @@ async function handleApi(request, response, requestUrl) {
   const segments = requestUrl.pathname.split('/').filter(Boolean);
   const collection = segments[1];
   const id = segments[2];
-
-  if (request.method === 'POST' && requestUrl.pathname === '/api/payments/checkout') {
-    if (!stripe) return sendJson(response, 503, { error: 'Stripe payments are not configured yet' });
-    const body = await readBody(request);
-    const produce = data.produce.find(item => item.id === body.produceId && item.status === 'Active');
-    const route = data.routes.find(item => item.id === body.routeId && item.status !== 'Booked');
-    const quantity = Number(body.quantity);
-    if (!produce || !body.buyer || !body.email || !route || !Number.isFinite(quantity) || quantity < 1 || quantity > produce.quantity) {
-      return sendJson(response, 400, { error: 'Choose an available product, route, buyer, email, and valid quantity' });
-    }
-    const order = {
-      id: `o-${Date.now()}`,
-      buyer: body.buyer,
-      email: body.email.trim().toLowerCase(),
-      item: produce.name,
-      produceId: produce.id,
-      routeId: route.id,
-      quantity,
-      status: 'Awaiting payment',
-      value: Number((quantity * produce.price).toFixed(2)),
-      deliveryStatus: 'Awaiting payment',
-      paymentStatus: 'Awaiting payment',
-      paymentMethod: 'Stripe Checkout',
-      escrowStatus: 'Payment pending'
-    };
-    const session = await stripe.checkout.sessions.create({
-      mode: 'payment',
-      customer_email: order.email,
-      line_items: [{ price_data: { currency: 'usd', product_data: { name: produce.name }, unit_amount: Math.round(produce.price * 100) }, quantity }],
-      metadata: { orderId: order.id },
-      success_url: `${requestUrl.origin}/order-tracking.html?payment=success&session_id={CHECKOUT_SESSION_ID}&email=${encodeURIComponent(order.email)}`,
-      cancel_url: `${requestUrl.origin}/produce.html?payment=cancelled`
-    });
-    data.orders.unshift(order);
-    produce.quantity -= quantity;
-    route.status = 'Booked';
-    addNotification(data, `Payment checkout started for order ${order.id} by ${order.buyer}.`, 'payment');
-    await writeStoredData(data);
-    return sendJson(response, 201, { checkoutUrl: session.url, order });
-  }
-
-  if (request.method === 'GET' && requestUrl.pathname === '/api/payments/verify') {
-    if (!stripe) return sendJson(response, 503, { error: 'Stripe payments are not configured yet' });
-    const sessionId = requestUrl.searchParams.get('session_id');
-    if (!sessionId) return sendJson(response, 400, { error: 'Stripe session is required' });
-    const session = await stripe.checkout.sessions.retrieve(sessionId);
-    const order = data.orders.find(item => item.id === session.metadata?.orderId);
-    if (!order) return sendJson(response, 404, { error: 'Order not found' });
-    if (session.payment_status === 'paid' && order.paymentStatus === 'Awaiting payment') {
-      order.status = 'Awaiting pickup';
-      order.deliveryStatus = 'Awaiting pickup';
-      order.paymentStatus = 'Held';
-      order.escrowStatus = 'Held in escrow';
-      order.paidAt = new Date().toISOString();
-      addNotification(data, `Payment received and held in escrow for order ${order.id}.`, 'payment');
-      await writeStoredData(data);
-    }
-    return sendJson(response, 200, { paid: session.payment_status === 'paid', order });
-  }
 
   if (request.method === 'GET' && requestUrl.pathname === '/api/dashboard') return sendJson(response, 200, dashboard(data));
   if (request.method === 'GET' && requestUrl.pathname === '/api/farmer') {
