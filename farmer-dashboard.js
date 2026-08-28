@@ -1,5 +1,5 @@
 const authScript = document.createElement('script'); authScript.src = 'dashboard-auth.js'; document.head.appendChild(authScript);
-const apiBase = '';
+const apiBase = location.port === '3000' ? '' : 'http://localhost:3000';
 const formatMoney = value => `₦${Number(value).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const toast = document.getElementById('toast');
 let farmerName = '';
