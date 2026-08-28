@@ -5,3 +5,12 @@ services:
     buildCommand: ""
     startCommand: node server.js
     plan: free
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: harvestlink-db
+          property: connectionString
+
+databases:
+  - name: harvestlink-db
+    plan: free

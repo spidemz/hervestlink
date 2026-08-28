@@ -2,11 +2,14 @@ const http = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
 const { URL } = require('node:url');
+const { Pool } = require('pg');
 
 const root = __dirname;
 const dataPath = path.join(root, 'data.json');
 const port = process.env.PORT || 3000;
 const mimeTypes = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.json': 'application/json' };
+const pool = process.env.DATABASE_URL ? new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } }) : null;
+let databaseReady;
 
 function readData() {
   return JSON.parse(fs.readFileSync(dataPath, 'utf8'));
@@ -14,6 +17,25 @@ function readData() {
 
 function writeData(data) {
   fs.writeFileSync(dataPath, JSON.stringify(data, null, 2) + '\n');
+}
+
+async function readStoredData() {
+  if (!pool) return readData();
+  if (!databaseReady) {
+    databaseReady = (async () => {
+      await pool.query('CREATE TABLE IF NOT EXISTS app_state (id integer PRIMARY KEY, data jsonb NOT NULL)');
+      const result = await pool.query('SELECT data FROM app_state WHERE id = 1');
+      if (!result.rowCount) await pool.query('INSERT INTO app_state (id, data) VALUES (1, $1)', [readData()]);
+    })().catch(error => { databaseReady = null; throw error; });
+  }
+  await databaseReady;
+  const result = await pool.query('SELECT data FROM app_state WHERE id = 1');
+  return result.rows[0].data;
+}
+
+async function writeStoredData(data) {
+  if (!pool) return writeData(data);
+  await pool.query('UPDATE app_state SET data = $1 WHERE id = 1', [data]);
 }
 
 function addNotification(data, message, type = 'update') {
@@ -53,7 +75,7 @@ function dashboard(data) {
 }
 
 async function handleApi(request, response, requestUrl) {
-  const data = readData();
+  const data = await readStoredData();
   const segments = requestUrl.pathname.split('/').filter(Boolean);
   const collection = segments[1];
   const id = segments[2];
@@ -71,7 +93,7 @@ async function handleApi(request, response, requestUrl) {
   }
   if (request.method === 'PATCH' && requestUrl.pathname === '/api/notifications/read-all') {
     (data.notifications || []).forEach(notification => { notification.read = true; });
-    writeData(data);
+    await writeStoredData(data);
     return sendJson(response, 200, { success: true });
   }
   if (!['produce', 'routes', 'orders'].includes(collection)) return sendJson(response, 404, { error: 'Endpoint not found' });
@@ -90,7 +112,7 @@ async function handleApi(request, response, requestUrl) {
     const route = { id: `r-${Date.now()}`, driver: body.driver, route: body.route, capacity: body.capacity, status: 'Open' };
     data.routes.unshift(route);
     addNotification(data, `New transport route published: ${route.route} by ${route.driver}.`, 'route');
-    writeData(data);
+    await writeStoredData(data);
     return sendJson(response, 201, route);
   }
   if (request.method === 'POST' && collection === 'orders') {
@@ -121,7 +143,7 @@ async function handleApi(request, response, requestUrl) {
     route.status = 'Booked';
     data.orders.unshift(order);
     addNotification(data, `New order ${order.id} placed for ${order.item} by ${order.buyer}. Payment is held in escrow.`, 'order');
-    writeData(data);
+    await writeStoredData(data);
     return sendJson(response, 201, order);
   }
   if (request.method === 'PATCH' && collection === 'orders' && id) {
@@ -161,7 +183,7 @@ async function handleApi(request, response, requestUrl) {
     } else {
       return sendJson(response, 400, { error: 'Unknown order action' });
     }
-    writeData(data);
+    await writeStoredData(data);
     return sendJson(response, 200, item);
   }
   if (request.method === 'POST' && collection === 'produce') {
@@ -170,7 +192,7 @@ async function handleApi(request, response, requestUrl) {
     const item = { id: `p-${Date.now()}`, name: body.name, farmer: body.farmer, region: body.region || 'Central', quantity: Number(body.quantity), price: Number(body.price), status: 'Active', ...(body.image ? { image: body.image } : {}) };
     data.produce.unshift(item);
     addNotification(data, `New produce listing added: ${item.name} by ${item.farmer}.`, 'produce');
-    writeData(data);
+    await writeStoredData(data);
     return sendJson(response, 201, item);
   }
   if (request.method === 'PATCH' && collection === 'produce' && id) {
@@ -179,7 +201,7 @@ async function handleApi(request, response, requestUrl) {
     const body = await readBody(request);
     Object.assign(item, body);
     addNotification(data, `Produce listing ${item.name} was updated.`, 'produce');
-    writeData(data);
+    await writeStoredData(data);
     return sendJson(response, 200, item);
   }
   if (request.method === 'DELETE' && collection === 'produce' && id) {
@@ -187,7 +209,7 @@ async function handleApi(request, response, requestUrl) {
     data.produce = data.produce.filter(entry => entry.id !== id);
     if (data.produce.length === originalLength) return sendJson(response, 404, { error: 'Produce listing not found' });
     addNotification(data, 'A produce listing was removed from the marketplace.', 'produce');
-    writeData(data);
+    await writeStoredData(data);
     return sendJson(response, 200, { success: true });
   }
   if (request.method === 'PATCH' && collection === 'routes' && id) {
@@ -205,7 +227,7 @@ async function handleApi(request, response, requestUrl) {
     } else {
       addNotification(data, `Route ${item.route} status changed to ${item.status}.`, 'route');
     }
-    writeData(data);
+    await writeStoredData(data);
     return sendJson(response, 200, item);
   }
   if (request.method === 'DELETE' && collection === 'routes' && id) {
