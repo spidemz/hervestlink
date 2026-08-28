@@ -1,6 +1,6 @@
 const toast = document.getElementById('toast');
 let toastTimer;
-const apiBase = location.port === '3000' ? '' : 'http://localhost:3000';
+const apiBase = '';
 const formatMoney = value => `₦${Number(value * 1500).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 document.querySelectorAll('.price').forEach(price => {
   const value = Number(price.textContent.replace(/[^0-9.]/g, ''));
