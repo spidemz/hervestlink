@@ -4,11 +4,11 @@ const toast = document.getElementById('toast');
 let toastTimer;
 let trackingEmail = '';
 const formatMoney = value => `₦${Number(value).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-const paymentSession = new URLSearchParams(location.search).get('session_id');
+const paymentReference = new URLSearchParams(location.search).get('reference');
 
 async function verifyPayment() {
-  if (!paymentSession) return;
-  const response = await fetch(`${apiBase}/api/payments/verify?session_id=${encodeURIComponent(paymentSession)}`);
+  if (!paymentReference) return;
+  const response = await fetch(`${apiBase}/api/payments/verify?reference=${encodeURIComponent(paymentReference)}`);
   const result = await response.json();
   if (!response.ok) throw new Error(result.error || 'Could not verify payment');
   showToast(result.paid ? 'Payment received and held in escrow.' : 'Payment is still pending.');
