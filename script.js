@@ -1,11 +1,6 @@
 const toast = document.getElementById('toast');
 let toastTimer;
 const apiBase = location.port === '3000' ? '' : 'http://localhost:3000';
-const formatMoney = value => `₦${Number(value * 1500).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-document.querySelectorAll('.price').forEach(price => {
-  const value = Number(price.textContent.replace(/[^0-9.]/g, ''));
-  if (Number.isFinite(value)) price.innerHTML = `${formatMoney(value)} <small>/ kg</small>`;
-});
 
 const siteNav = document.querySelector('.nav');
 const siteNavLinks = document.querySelector('.nav-links');
@@ -99,7 +94,7 @@ function listingMarkup(item) {
   };
   const image = item.image || `https://images.unsplash.com/${imageMap[item.name.toLowerCase()] || 'photo-1490474418585-ba9bad8fd0ea'}?auto=format&fit=crop&w=700&q=80`;
   const regionKey = { northern: 'north', central: 'central', coastal: 'coast' }[item.region.toLowerCase()] || 'all';
-  return `<article class="listing" data-name="${item.name.toLowerCase()}" data-region="${regionKey}"><div class="listing-image" style="background-image:url('${image}')"><span>${item.status === 'Review' ? 'Pending review' : 'Available'}</span><button class="heart" aria-label="Save ${item.name}">♡</button></div><div class="listing-body"><h3>${item.name}</h3><p class="origin">${item.farmer} · ${item.region}</p><div class="listing-meta"><span class="price">${formatMoney(item.price)} <small>/ kg</small></span><span class="qty">${Number(item.quantity).toLocaleString()} kg available</span></div><button class="btn btn-green order-btn" data-produce="${item.id}" data-name="${item.name}" data-price="${item.price}" data-quantity="${item.quantity}">Order now</button></div></article>`;
+  return `<article class="listing" data-name="${item.name.toLowerCase()}" data-region="${regionKey}"><div class="listing-image" style="background-image:url('${image}')"><span>${item.status === 'Review' ? 'Pending review' : 'Available'}</span><button class="heart" aria-label="Save ${item.name}">♡</button></div><div class="listing-body"><h3>${item.name}</h3><p class="origin">${item.farmer} · ${item.region}</p><div class="listing-meta"><span class="price">$${Number(item.price).toFixed(2)} <small>/ kg</small></span><span class="qty">${Number(item.quantity).toLocaleString()} kg available</span></div><button class="btn btn-green order-btn" data-produce="${item.id}" data-name="${item.name}" data-price="${item.price}" data-quantity="${item.quantity}">Order now</button></div></article>`;
 }
 
 function setupOrderDialog() {
@@ -115,7 +110,7 @@ async function openOrderDialog(button) {
   const routes = await response.json();
   const availableRoutes = routes.filter(route => route.status !== 'Booked');
   if (!availableRoutes.length) return showToast('No transport routes are available right now');
-  document.getElementById('orderProduct').textContent = `${button.dataset.name} · ${formatMoney(button.dataset.price)} / kg`;
+  document.getElementById('orderProduct').textContent = `${button.dataset.name} · $${Number(button.dataset.price).toFixed(2)} / kg`;
   document.getElementById('orderProduceId').value = button.dataset.produce;
   document.getElementById('orderQuantity').max = button.dataset.quantity;
   document.getElementById('orderQuantity').value = Math.min(10, Number(button.dataset.quantity));

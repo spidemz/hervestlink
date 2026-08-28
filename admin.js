@@ -3,7 +3,6 @@ const toast = document.getElementById('toast');
 let toastTimer;
 const authScript = document.createElement('script'); authScript.src = 'dashboard-auth.js'; document.head.appendChild(authScript);
 const apiBase = location.port === '3000' ? '' : 'http://localhost:3000';
-const formatMoney = value => `₦${Number(value).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 function showToast(message) {
   toast.textContent = message;
@@ -29,7 +28,7 @@ function renderStats(stats) {
 }
 
 function renderProduce(items) {
-  document.getElementById('produceRows').innerHTML = items.map(item => `<tr><td><strong>${item.name}</strong><small>${item.id}</small></td><td>${item.farmer}</td><td>${item.region}</td><td>${item.quantity.toLocaleString()} kg</td><td>${formatMoney(item.price * 1500)}</td><td><span class="status status-${item.status.toLowerCase()}">${item.status}</span></td><td class="row-actions">${item.status === 'Review' ? `<button class="table-btn" data-approve="${item.id}">Approve</button>` : ''}<button class="delete-btn" data-delete="${item.id}" aria-label="Delete ${item.name}">×</button></td></tr>`).join('');
+  document.getElementById('produceRows').innerHTML = items.map(item => `<tr><td><strong>${item.name}</strong><small>${item.id}</small></td><td>${item.farmer}</td><td>${item.region}</td><td>${item.quantity.toLocaleString()} kg</td><td>$${item.price.toFixed(2)}</td><td><span class="status status-${item.status.toLowerCase()}">${item.status}</span></td><td class="row-actions">${item.status === 'Review' ? `<button class="table-btn" data-approve="${item.id}">Approve</button>` : ''}<button class="delete-btn" data-delete="${item.id}" aria-label="Delete ${item.name}">×</button></td></tr>`).join('');
 }
 
 function renderRoutes(items) {
