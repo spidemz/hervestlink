@@ -3,6 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { URL } = require('node:url');
 const { Pool } = require('pg');
+const Stripe = require('stripe');
 
 const root = __dirname;
 const dataPath = path.join(root, 'data.json');
@@ -10,7 +11,7 @@ const port = process.env.PORT || 3000;
 const currencyRate = Number(process.env.USD_TO_NGN_RATE || 1500);
 const mimeTypes = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.json': 'application/json' };
 const pool = process.env.DATABASE_URL ? new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } }) : null;
-const paystackKey = process.env.PAYSTACK_SECRET_KEY;
+const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY) : null;
 let databaseReady;
 
 function readData() {
@@ -83,7 +84,7 @@ async function handleApi(request, response, requestUrl) {
   const id = segments[2];
 
   if (request.method === 'POST' && requestUrl.pathname === '/api/payments/checkout') {
-    if (!paystackKey) return sendJson(response, 503, { error: 'Paystack payments are not configured yet' });
+    if (!stripe) return sendJson(response, 503, { error: 'Stripe payments are not configured yet' });
     const body = await readBody(request);
     const produce = data.produce.find(item => item.id === body.produceId && item.status === 'Active');
     const route = data.routes.find(item => item.id === body.routeId && item.status !== 'Booked');
@@ -106,32 +107,30 @@ async function handleApi(request, response, requestUrl) {
       paymentMethod: 'Stripe Checkout',
       escrowStatus: 'Payment pending'
     };
-    const reference = `hl-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    const paymentResponse = await fetch('https://api.paystack.co/transaction/initialize', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${paystackKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: order.email, amount: Math.round(order.value * 100), currency: 'NGN', reference, callback_url: `${requestUrl.origin}/order-tracking.html?payment=success&reference=${reference}&email=${encodeURIComponent(order.email)}`, metadata: { orderId: order.id } })
+    const session = await stripe.checkout.sessions.create({
+      mode: 'payment',
+      customer_email: order.email,
+      line_items: [{ price_data: { currency: 'ngn', product_data: { name: produce.name }, unit_amount: Math.round(produce.price * currencyRate * 100) }, quantity }],
+      metadata: { orderId: order.id },
+      success_url: `${requestUrl.origin}/order-tracking.html?payment=success&session_id={CHECKOUT_SESSION_ID}&email=${encodeURIComponent(order.email)}`,
+      cancel_url: `${requestUrl.origin}/produce.html?payment=cancelled`
     });
-    const payment = await paymentResponse.json();
-    if (!paymentResponse.ok || !payment.status) return sendJson(response, 502, { error: payment.message || 'Paystack could not start payment' });
-    order.paymentReference = reference;
     data.orders.unshift(order);
     produce.quantity -= quantity;
     route.status = 'Booked';
     addNotification(data, `Payment checkout started for order ${order.id} by ${order.buyer}.`, 'payment');
     await writeStoredData(data);
-    return sendJson(response, 201, { checkoutUrl: payment.data.authorization_url, order });
+    return sendJson(response, 201, { checkoutUrl: session.url, order });
   }
 
   if (request.method === 'GET' && requestUrl.pathname === '/api/payments/verify') {
-    if (!paystackKey) return sendJson(response, 503, { error: 'Paystack payments are not configured yet' });
-    const reference = requestUrl.searchParams.get('reference');
-    if (!reference) return sendJson(response, 400, { error: 'Paystack payment reference is required' });
-    const paymentResponse = await fetch(`https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`, { headers: { Authorization: `Bearer ${paystackKey}` } });
-    const payment = await paymentResponse.json();
-    const order = data.orders.find(item => item.paymentReference === reference);
+    if (!stripe) return sendJson(response, 503, { error: 'Stripe payments are not configured yet' });
+    const sessionId = requestUrl.searchParams.get('session_id');
+    if (!sessionId) return sendJson(response, 400, { error: 'Stripe session is required' });
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+    const order = data.orders.find(item => item.id === session.metadata?.orderId);
     if (!order) return sendJson(response, 404, { error: 'Order not found' });
-    if (paymentResponse.ok && payment.status && payment.data.status === 'success' && order.paymentStatus === 'Awaiting payment') {
+    if (session.payment_status === 'paid' && order.paymentStatus === 'Awaiting payment') {
       order.status = 'Awaiting pickup';
       order.deliveryStatus = 'Awaiting pickup';
       order.paymentStatus = 'Held';
@@ -140,7 +139,7 @@ async function handleApi(request, response, requestUrl) {
       addNotification(data, `Payment received and held in escrow for order ${order.id}.`, 'payment');
       await writeStoredData(data);
     }
-    return sendJson(response, 200, { paid: paymentResponse.ok && payment.status && payment.data.status === 'success', order });
+    return sendJson(response, 200, { paid: session.payment_status === 'paid', order });
   }
 
   if (request.method === 'GET' && requestUrl.pathname === '/api/dashboard') return sendJson(response, 200, dashboard(data));

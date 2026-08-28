@@ -128,14 +128,10 @@ async function openOrderDialog(button) {
 async function submitOrder(event) {
   event.preventDefault();
   const response = await fetch(`${apiBase}/api/payments/checkout`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(Object.fromEntries(new FormData(event.target).entries())) });
-  const text = await response.text();
-  let result;
-  try { result = text ? JSON.parse(text) : {}; } catch { return showToast(`Payment service returned an invalid response (${response.status})`); }
+  const result = await response.json();
   if (response.status === 503) {
     const fallback = await fetch(`${apiBase}/api/orders`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(Object.fromEntries(new FormData(event.target).entries())) });
-    const fallbackText = await fallback.text();
-    let fallbackResult;
-    try { fallbackResult = fallbackText ? JSON.parse(fallbackText) : {}; } catch { return showToast(`Order service returned an invalid response (${fallback.status})`); }
+    const fallbackResult = await fallback.json();
     if (!fallback.ok) return showToast(fallbackResult.error || 'Could not create order');
     return finishOrder(event, fallbackResult);
   }
