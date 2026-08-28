@@ -8,6 +8,7 @@ const Stripe = require('stripe');
 const root = __dirname;
 const dataPath = path.join(root, 'data.json');
 const port = process.env.PORT || 3000;
+const currencyRate = Number(process.env.USD_TO_NGN_RATE || 1500);
 const mimeTypes = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.json': 'application/json' };
 const pool = process.env.DATABASE_URL ? new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } }) : null;
 const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY) : null;
@@ -100,7 +101,7 @@ async function handleApi(request, response, requestUrl) {
       routeId: route.id,
       quantity,
       status: 'Awaiting payment',
-      value: Number((quantity * produce.price).toFixed(2)),
+      value: Number((quantity * produce.price * currencyRate).toFixed(2)),
       deliveryStatus: 'Awaiting payment',
       paymentStatus: 'Awaiting payment',
       paymentMethod: 'Stripe Checkout',
@@ -109,7 +110,7 @@ async function handleApi(request, response, requestUrl) {
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       customer_email: order.email,
-      line_items: [{ price_data: { currency: 'usd', product_data: { name: produce.name }, unit_amount: Math.round(produce.price * 100) }, quantity }],
+      line_items: [{ price_data: { currency: 'ngn', product_data: { name: produce.name }, unit_amount: Math.round(produce.price * currencyRate * 100) }, quantity }],
       metadata: { orderId: order.id },
       success_url: `${requestUrl.origin}/order-tracking.html?payment=success&session_id={CHECKOUT_SESSION_ID}&email=${encodeURIComponent(order.email)}`,
       cancel_url: `${requestUrl.origin}/produce.html?payment=cancelled`
@@ -194,7 +195,7 @@ async function handleApi(request, response, requestUrl) {
       routeId: route.id,
       quantity,
       status: 'Awaiting pickup',
-      value: Number((quantity * produce.price).toFixed(2)),
+      value: Number((quantity * produce.price * currencyRate).toFixed(2)),
       deliveryStatus: 'Awaiting pickup',
       paymentStatus: 'Held',
       paymentMethod,
