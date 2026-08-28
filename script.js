@@ -122,9 +122,19 @@ async function openOrderDialog(button) {
 
 async function submitOrder(event) {
   event.preventDefault();
-  const response = await fetch(`${apiBase}/api/orders`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(Object.fromEntries(new FormData(event.target).entries())) });
+  const response = await fetch(`${apiBase}/api/payments/checkout`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(Object.fromEntries(new FormData(event.target).entries())) });
   const result = await response.json();
+  if (response.status === 503) {
+    const fallback = await fetch(`${apiBase}/api/orders`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(Object.fromEntries(new FormData(event.target).entries())) });
+    const fallbackResult = await fallback.json();
+    if (!fallback.ok) return showToast(fallbackResult.error || 'Could not create order');
+    return finishOrder(event, fallbackResult);
+  }
   if (!response.ok) return showToast(result.error || 'Could not create order');
+  window.location.href = result.checkoutUrl;
+}
+
+async function finishOrder(event, result) {
   const dialog = document.getElementById('orderDialog');
   if (typeof dialog.close === 'function') dialog.close();
   else dialog.removeAttribute('open');
