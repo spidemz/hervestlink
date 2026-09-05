@@ -87,7 +87,7 @@ async function handleApi(request, response, requestUrl) {
   if (request.method === 'POST' && collection === 'routes') {
     const body = await readBody(request);
     if (!body.driver || !body.route || !body.capacity) return sendJson(response, 400, { error: 'Driver, route, and capacity are required' });
-    const route = { id: `r-${Date.now()}`, driver: body.driver, route: body.route, capacity: body.capacity, status: 'Open' };
+    const route = { id: `r-${Date.now()}`, driver: body.driver, route: body.route, originAddress: String(body.originAddress || '').trim(), destinationAddress: String(body.destinationAddress || '').trim(), capacity: body.capacity, status: 'Open' };
     data.routes.unshift(route);
     addNotification(data, `New transport route published: ${route.route} by ${route.driver}.`, 'route');
     writeData(data);
@@ -98,8 +98,8 @@ async function handleApi(request, response, requestUrl) {
     const produce = data.produce.find(item => item.id === body.produceId && item.status === 'Active');
     const route = data.routes.find(item => item.id === body.routeId && item.status !== 'Booked');
     const quantity = Number(body.quantity);
-    if (!produce || !body.buyer || !body.email || !route || !Number.isFinite(quantity) || quantity < 1 || quantity > produce.quantity) {
-      return sendJson(response, 400, { error: 'Choose an available product, route, buyer, email, and valid quantity' });
+    if (!produce || !body.buyer || !body.email || !body.deliveryAddress || !route || !Number.isFinite(quantity) || quantity < 1 || quantity > produce.quantity) {
+      return sendJson(response, 400, { error: 'Choose an available product, route, buyer, delivery address, email, and valid quantity' });
     }
     const paymentMethod = String(body.paymentMethod || 'Card (Stripe Escrow)').trim() || 'Card (Stripe Escrow)';
     const order = {
@@ -109,6 +109,8 @@ async function handleApi(request, response, requestUrl) {
       item: produce.name,
       produceId: produce.id,
       routeId: route.id,
+      pickupAddress: route.originAddress,
+      deliveryAddress: String(body.deliveryAddress).trim(),
       quantity,
       status: 'Awaiting pickup',
       value: Number((quantity * produce.price).toFixed(2)),
