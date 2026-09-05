@@ -1,6 +1,17 @@
 const toast = document.getElementById('toast');
 let toastTimer;
-const apiBase = location.port === '3000' ? '' : 'http://localhost:3000';
+const isLocalPreview = window.location.protocol === 'file:' || ['localhost', '127.0.0.1'].includes(window.location.hostname);
+const apiBase = isLocalPreview && window.location.port !== '3000'
+  ? 'http://localhost:3000'
+  : '';
+
+async function readJson(response) {
+  const text = await response.text();
+  let body;
+  try { body = text ? JSON.parse(text) : {}; } catch { throw new Error(`API returned HTML instead of JSON (${response.status}). Open the site through http://localhost:3000.`); }
+  if (!response.ok) throw new Error(body.error || `Request failed (${response.status})`);
+  return body;
+}
 
 const siteNav = document.querySelector('.nav');
 const siteNavLinks = document.querySelector('.nav-links');
@@ -107,7 +118,7 @@ function setupOrderDialog() {
 async function openOrderDialog(button) {
   setupOrderDialog();
   const response = await fetch(`${apiBase}/api/routes`);
-  const routes = await response.json();
+  const routes = await readJson(response);
   const availableRoutes = routes.filter(route => route.status !== 'Booked');
   if (!availableRoutes.length) return showToast('No transport routes are available right now');
   document.getElementById('orderProduct').textContent = `${button.dataset.name} · $${Number(button.dataset.price).toFixed(2)} / kg`;
@@ -123,8 +134,8 @@ async function openOrderDialog(button) {
 async function submitOrder(event) {
   event.preventDefault();
   const response = await fetch(`${apiBase}/api/orders`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(Object.fromEntries(new FormData(event.target).entries())) });
-  const result = await response.json();
-  if (!response.ok) return showToast(result.error || 'Could not create order');
+  let result;
+  try { result = await readJson(response); } catch (error) { return showToast(error.message); }
   const dialog = document.getElementById('orderDialog');
   if (typeof dialog.close === 'function') dialog.close();
   else dialog.removeAttribute('open');
