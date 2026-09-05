@@ -135,11 +135,15 @@ async function handleApi(request, response, requestUrl) {
       if (item.status !== 'Delivered') return sendJson(response, 409, { error: 'The order must be delivered before receipt can be confirmed' });
       item.deliveryStatus = 'Received';
       item.receivedAt = new Date().toISOString();
-      addNotification(data, `Buyer confirmed receipt for order ${item.id}. Payment can now be released.`, 'order');
-    } else if (body.action === 'release-payment') {
-      if (item.deliveryStatus !== 'Received') return sendJson(response, 409, { error: 'Buyer confirmation is required before payment can be released' });
       item.paymentStatus = 'Released';
       item.paidAt = new Date().toISOString();
+      item.escrowStatus = 'Released';
+      addNotification(data, `Buyer confirmed receipt for order ${item.id}. Payment was released to the farmer.`, 'payment');
+    } else if (body.action === 'release-payment') {
+      if (item.status !== 'Delivered' || item.deliveryStatus !== 'Received') return sendJson(response, 409, { error: 'Driver delivery and buyer confirmation are required before payment can be released' });
+      item.paymentStatus = 'Released';
+      item.paidAt = new Date().toISOString();
+      item.escrowStatus = 'Released';
       addNotification(data, `Payment released to the farmer for order ${item.id}.`, 'payment');
     } else if (body.action === 'assign-route') {
       const route = data.routes.find(entry => entry.id === body.routeId && entry.status !== 'Completed');

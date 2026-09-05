@@ -38,7 +38,7 @@ document.addEventListener('click', async event => {
     const response = await fetch(`${apiBase}/api/orders/${orderId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'confirm-received', email: trackingEmail }) });
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || 'Could not confirm receipt');
-    showToast('Receipt confirmed. The admin can now release payment.');
+    showToast('Receipt confirmed. Payment was released to the farmer.');
     await loadOrders();
   } catch (error) { showToast(error.message); }
 });
