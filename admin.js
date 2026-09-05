@@ -3,6 +3,8 @@ const toast = document.getElementById('toast');
 let toastTimer;
 const authScript = document.createElement('script'); authScript.src = 'dashboard-auth.js'; document.head.appendChild(authScript);
 const apiBase = '';
+const seenNotificationIds = new Set();
+let notificationsInitialized = false;
 
 function showToast(message) {
   toast.textContent = message;
@@ -18,6 +20,23 @@ async function request(path, options) {
   try { body = text ? JSON.parse(text) : {}; } catch { throw new Error(`Server returned invalid JSON (${response.status})`); }
   if (!response.ok) throw new Error(body.error || `Request failed (${response.status})`);
   return body;
+}
+
+async function checkNotifications() {
+  try {
+    const notifications = await request('/api/notifications');
+    if (!notificationsInitialized) {
+      notifications.forEach(notification => seenNotificationIds.add(notification.id));
+      notificationsInitialized = true;
+      return;
+    }
+    const newNotifications = notifications.filter(notification => !seenNotificationIds.has(notification.id) && !notification.read);
+    notifications.forEach(notification => seenNotificationIds.add(notification.id));
+    if (newNotifications.length) {
+      showToast(newNotifications[0].message);
+      await loadDashboard();
+    }
+  } catch {}
 }
 
 function renderStats(stats) {
@@ -77,3 +96,5 @@ document.getElementById('newProduceBtn').addEventListener('click', () => documen
 document.getElementById('closeDialog').addEventListener('click', () => document.getElementById('produceDialog').close());
 document.getElementById('refreshBtn').addEventListener('click', async () => { await loadDashboard(); showToast('Dashboard refreshed'); });
 loadDashboard().catch(error => showToast(`Could not load dashboard: ${error.message}`));
+checkNotifications();
+setInterval(checkNotifications, 5000);

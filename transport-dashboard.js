@@ -2,9 +2,28 @@ const authScript = document.createElement('script'); authScript.src = 'dashboard
 const apiBase = '';
 const toast = document.getElementById('toast');
 let toastTimer;
+const seenNotificationIds = new Set();
+let notificationsInitialized = false;
 
 function showToast(message) { toast.textContent = message; toast.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => toast.classList.remove('show'), 2600); }
 async function request(path, options) { const response = await fetch(`${apiBase}${path}`, { headers: { 'Content-Type': 'application/json' }, ...options }); const text = await response.text(); const body = text ? JSON.parse(text) : {}; if (!response.ok) throw new Error(body.error || `Request failed (${response.status})`); return body; }
+
+async function checkNotifications() {
+  try {
+    const notifications = await request('/api/notifications');
+    if (!notificationsInitialized) {
+      notifications.forEach(notification => seenNotificationIds.add(notification.id));
+      notificationsInitialized = true;
+      return;
+    }
+    const newNotifications = notifications.filter(notification => !seenNotificationIds.has(notification.id) && !notification.read);
+    notifications.forEach(notification => seenNotificationIds.add(notification.id));
+    if (newNotifications.length) {
+      showToast(newNotifications[0].message);
+      await loadDashboard();
+    }
+  } catch {}
+}
 
 async function loadDashboard() {
   const data = await request('/api/dashboard');
@@ -23,3 +42,5 @@ document.getElementById('closeDialog').addEventListener('click', () => document.
 document.getElementById('routeForm').addEventListener('submit', async event => { event.preventDefault(); try { await request('/api/routes', { method: 'POST', body: JSON.stringify(Object.fromEntries(new FormData(event.target).entries())) }); event.target.reset(); document.getElementById('routeDialog').close(); showToast('Transport route published'); await loadDashboard(); } catch (error) { showToast(error.message); } });
 document.getElementById('refreshBtn').addEventListener('click', async () => { await loadDashboard(); showToast('Dashboard refreshed'); });
 loadDashboard().catch(error => showToast(`Could not load routes: ${error.message}`));
+checkNotifications();
+setInterval(checkNotifications, 5000);
