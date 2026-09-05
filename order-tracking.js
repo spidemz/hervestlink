@@ -1,4 +1,4 @@
-const apiBase = location.port === '3000' ? '' : 'http://localhost:3000';
+const apiBase = '';
 const orderList = document.getElementById('orderList');
 const toast = document.getElementById('toast');
 let toastTimer;
