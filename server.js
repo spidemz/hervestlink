@@ -98,7 +98,7 @@ async function handleApi(request, response, requestUrl) {
     const produce = data.produce.find(item => item.id === body.produceId && item.status === 'Active');
     const route = data.routes.find(item => item.id === body.routeId && item.status !== 'Booked');
     const quantity = Number(body.quantity);
-    if (!produce || !body.buyer || !body.email || !body.deliveryAddress || !route || !Number.isFinite(quantity) || quantity < 1 || quantity > produce.quantity) {
+    if (!produce || !body.buyer || !body.email || !body.deliveryAddress || !route || !Number.isFinite(quantity) || quantity < 1) {
       return sendJson(response, 400, { error: 'Choose an available product, route, buyer, delivery address, email, and valid quantity' });
     }
     const paymentMethod = String(body.paymentMethod || 'Card (Stripe Escrow)').trim() || 'Card (Stripe Escrow)';

@@ -123,8 +123,8 @@ async function openOrderDialog(button) {
   if (!availableRoutes.length) return showToast('No transport routes are available right now');
   document.getElementById('orderProduct').textContent = `${button.dataset.name} · $${Number(button.dataset.price).toFixed(2)} / kg`;
   document.getElementById('orderProduceId').value = button.dataset.produce;
-  document.getElementById('orderQuantity').max = button.dataset.quantity;
-  document.getElementById('orderQuantity').value = Math.min(10, Number(button.dataset.quantity));
+  document.getElementById('orderQuantity').min = '1';
+  document.getElementById('orderQuantity').value = Number(button.dataset.quantity) > 0 ? Number(button.dataset.quantity) : 1;
   document.getElementById('routeChoice').innerHTML = availableRoutes.map(route => `<option value="${route.id}">${route.driver} · ${route.route} · ${route.capacity} left</option>`).join('');
   const dialog = document.getElementById('orderDialog');
   if (typeof dialog.showModal === 'function') dialog.showModal();
